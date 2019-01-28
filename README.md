@@ -6,7 +6,7 @@ Package gocall gives you the ability to create your own out of the box load
 balancer and API gateway!
 
 ```go
-var lb = NewLoadBalancer([]string{
+var lb = gocall.NewLoadBalancer([]string{
 "http://127.0.0.1:1234",
 "http://127.0.0.1:1235",
 "http://127.0.0.1:1236",
@@ -52,7 +52,7 @@ func NewLoadBalancer(hosts []string, healthCheckURL string, healthCheckDelay tim
 NewLoadBalancer returns a load balancer
 
 ```go
-var lb = NewLoadBalancer([]string{
+var lb = gocall.NewLoadBalancer([]string{
 "http://127.0.0.1:1234",
 "http://127.0.0.1:1235",
 "http://127.0.0.1:1236",

@@ -22,7 +22,7 @@ type LoadBalancer struct {
 
 // NewLoadBalancer returns a load balancer
 /*
-	var lb = NewLoadBalancer([]string{
+	var lb = gocall.NewLoadBalancer([]string{
 		"http://127.0.0.1:1234",
 		"http://127.0.0.1:1235",
 		"http://127.0.0.1:1236",
