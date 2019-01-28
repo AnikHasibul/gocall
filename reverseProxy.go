@@ -6,11 +6,12 @@ import (
 	"net/url"
 )
 
-func Reversify(target string, res http.ResponseWriter, req *http.Request) {
+// ReverseProxy proxies the target with given http request
+func ReverseProxy(target string, res http.ResponseWriter, req *http.Request) {
 	// parse the url
-	url, _ := url.Parse(target)
+	uri, _ := url.Parse(target)
 	// create the reverse proxy
-	proxy := httputil.NewSingleHostReverseProxy(url)
+	proxy := httputil.NewSingleHostReverseProxy(uri)
 	// Note that ServeHttp is non blocking and uses a go routine under the hood
 	proxy.ServeHTTP(res, req)
 }
