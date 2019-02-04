@@ -50,6 +50,7 @@ func NewLoadBalancer(hosts []string, healthCheckURL string, healthCheckDelay tim
 		healthyHosts: servers,
 		hosts:        hosts,
 	}
+	b.Fallback = DefaultFallback
 	// health Checker
 	go func() {
 		for {
@@ -114,9 +115,6 @@ func (b *LoadBalancer) FindTheHealthiest() string {
 func (b *LoadBalancer) ProxyTheHealthiest(w http.ResponseWriter, r *http.Request) {
 	// find the ligtest server
 	host := b.FindTheHealthiest()
-	if b.Fallback == nil {
-		b.Fallback = DefaultFallback
-	}
 	if host == "" {
 		b.Fallback(w, r, errors.New("gocall: no server found for handling this request"))
 		return
