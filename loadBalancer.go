@@ -1,6 +1,7 @@
 package gocall
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -113,8 +114,11 @@ func (b *LoadBalancer) FindTheHealthiest() string {
 func (b *LoadBalancer) ProxyTheHealthiest(w http.ResponseWriter, r *http.Request) {
 	// find the ligtest server
 	host := b.FindTheHealthiest()
+	if b.Fallback == nil {
+		b.Fallback = DefaultFallback
+	}
 	if host == "" {
-		http.Error(w, "Oops!", 500)
+		b.Fallback(w, r, errors.New("gocall: no server found for handling this request"))
 		return
 	}
 	b.mu.Lock()
@@ -134,9 +138,6 @@ func (b *LoadBalancer) ProxyTheHealthiest(w http.ResponseWriter, r *http.Request
 	r.URL.Scheme = uri.Scheme
 	r.Host = uri.Host
 	proxy := httputil.NewSingleHostReverseProxy(uri)
-	if b.Fallback == nil {
-		b.Fallback = DefaultFallback
-	}
 	proxy.ErrorHandler = b.Fallback
 	proxy.ServeHTTP(w, r)
 }
