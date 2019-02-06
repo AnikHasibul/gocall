@@ -43,20 +43,17 @@ func NewLoadBalancer(hosts []string, healthCheckURL string, healthCheckDelay tim
 	}
 	// preparing the LoadBalancer
 	b := &LoadBalancer{
+		Fallback:     DefaultFallback,
 		HealthURL:    healthCheckURL,
 		healthyHosts: servers,
 		hosts:        hosts,
 	}
-	b.Fallback = DefaultFallback
 	// health Checker
 	go func() {
 		for {
 			b.healthChecker()
 			time.Sleep(healthCheckDelay)
 		}
-	}()
-	// finding up the healthiest server
-	go func() {
 	}()
 	return b
 }
@@ -105,6 +102,16 @@ func (b *LoadBalancer) FindTheHealthiest() string {
 		}
 		return true
 	})
+	b.mu.Lock()
+	c, _ := b.healthyHosts.Load(lightest)
+	b.healthyHosts.Store(lightest, sure.Int(c)+1)
+	b.mu.Unlock()
+	defer func() {
+		b.mu.Lock()
+		c, _ := b.healthyHosts.Load(lightest)
+		b.healthyHosts.Store(lightest, sure.Int(c)+-1)
+		b.mu.Unlock()
+	}()
 	return lightest
 }
 
@@ -116,17 +123,6 @@ func (b *LoadBalancer) ProxyTheHealthiest(ctx *fasthttp.RequestCtx) {
 		b.Fallback(ctx, errors.New("gocall: no server found for handling this request"))
 		return
 	}
-	b.mu.Lock()
-	c, _ := b.healthyHosts.Load(host)
-	b.healthyHosts.Store(host, sure.Int(c)+1)
-	b.mu.Unlock()
-	defer func() {
-		b.mu.Lock()
-		c, _ := b.healthyHosts.Load(host)
-		b.healthyHosts.Store(host, sure.Int(c)+-1)
-		b.mu.Unlock()
-	}()
-	ctx.Response.Header.Set("X-Gate", "BOOM!")
 	ctx.URI().SetHost(host)
 	ctx.URI().SetScheme("https")
 	client := &fasthttp.Client{}
@@ -149,7 +145,6 @@ func (b *LoadBalancer) healthCheck(uri string) bool {
 	if err != nil {
 		return false
 	}
-	//	bodyBytes := resp.Body()
 	return true
 }
 
@@ -157,5 +152,4 @@ func (b *LoadBalancer) healthCheck(uri string) bool {
 func DefaultFallback(ctx *fasthttp.RequestCtx, err error) {
 	ctx.SetStatusCode(fasthttp.StatusServiceUnavailable)
 	ctx.SetBody([]byte(err.Error()))
-	//panic(err)
 }
