@@ -6,13 +6,13 @@
 		"127.0.0.1:1236",
 		}, "/health", 10*time.Second)
 	func main() {
-        http.HandleFunc("/", proxify)
-        http.ListenAndServe(":8080", nil)
+      fasthttp.ListenAndServe(":8081", proxify)
 	}
-	func proxify(w http.ResponseWriter, r *http.Request) {
-	// check basic auth here
-	// now proxy the request
-	lb.ProxyTheHealthiest(w, r)
-	}
+  func proxify(ctx *fasthttp.RequestCtx) {
+    // Check auth here
+    // ....
+    // Now pass the request to the target server
+  	lb.ProxyTheHealthiest(ctx)
+  }
 */
 package gocall
