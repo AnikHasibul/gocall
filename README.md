@@ -10,7 +10,7 @@ var lb = gocall.NewLoadBalancer([]string{
   "127.0.0.1:1234",
   "127.0.0.1:1235",
   "127.0.0.1:1236",
-  }, "/health", 10*time.Second)
+}, "/health", 10*time.Second)
 func main() {
     fasthttp.ListenAndServe(":8081", proxify)
 }
