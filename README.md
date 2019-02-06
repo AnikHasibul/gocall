@@ -7,9 +7,9 @@ balancer and API gateway!
 
 ```go
 var lb = gocall.NewLoadBalancer([]string{
-"http://127.0.0.1:1234",
-"http://127.0.0.1:1235",
-"http://127.0.0.1:1236",
+  "127.0.0.1:1234",
+  "127.0.0.1:1235",
+  "127.0.0.1:1236",
 }, "/health", 10*time.Second)
 
 func main() {
@@ -53,9 +53,9 @@ NewLoadBalancer returns a load balancer
 
 ```go
 var lb = gocall.NewLoadBalancer([]string{
-"http://127.0.0.1:1234",
-"http://127.0.0.1:1235",
-"http://127.0.0.1:1236",
+  "127.0.0.1:1234",
+  "127.0.0.1:1235",
+  "127.0.0.1:1236",
 }, "/health", 10*time.Second)
 
 func main() {

@@ -1,17 +1,18 @@
 package gocall
 
 import (
-	"net/http"
-	"net/http/httputil"
-	"net/url"
+	"log"
+
+	"github.com/valyala/fasthttp"
 )
 
 // ReverseProxy proxies the target with given http request
-func ReverseProxy(target string, res http.ResponseWriter, req *http.Request) {
-	// parse the url
-	uri, _ := url.Parse(target)
-	// create the reverse proxy
-	proxy := httputil.NewSingleHostReverseProxy(uri)
-	// Note that ServeHttp is non blocking and uses a go routine under the hood
-	proxy.ServeHTTP(res, req)
+func ReverseProxy(host string, ctx *fasthttp.RequestCtx) {
+	c := fasthttp.Client{}
+	ctx.Request.SetHost(host)
+	err := c.Do(&ctx.Request, &ctx.Response)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }

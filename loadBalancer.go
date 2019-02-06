@@ -2,19 +2,16 @@ package gocall
 
 import (
 	"errors"
-	"log"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"sync"
 	"time"
 
 	"github.com/anikhasibul/sure"
+	"github.com/valyala/fasthttp"
 )
 
 // LoadBalancer holds basic load balancing mechanisms
 type LoadBalancer struct {
-	Fallback     func(http.ResponseWriter, *http.Request, error)
+	Fallback     func(*fasthttp.RequestCtx, error)
 	HealthURL    string
 	healthyHosts *sync.Map
 	hosts        []string
@@ -24,9 +21,9 @@ type LoadBalancer struct {
 // NewLoadBalancer returns a load balancer
 /*
 	var lb = gocall.NewLoadBalancer([]string{
-		"http://127.0.0.1:1234",
-		"http://127.0.0.1:1235",
-		"http://127.0.0.1:1236",
+		"127.0.0.1:1234",
+		"127.0.0.1:1235",
+		"127.0.0.1:1236",
 		}, "/health", 10*time.Second)
 	func main() {
         http.HandleFunc("/", proxify)
@@ -112,11 +109,11 @@ func (b *LoadBalancer) FindTheHealthiest() string {
 }
 
 // ProxyTheHealthiest sends a reverse proxy request to the heathiest server returned by FindTheHealthiest()
-func (b *LoadBalancer) ProxyTheHealthiest(w http.ResponseWriter, r *http.Request) {
+func (b *LoadBalancer) ProxyTheHealthiest(ctx *fasthttp.RequestCtx) {
 	// find the ligtest server
 	host := b.FindTheHealthiest()
 	if host == "" {
-		b.Fallback(w, r, errors.New("gocall: no server found for handling this request"))
+		b.Fallback(ctx, errors.New("gocall: no server found for handling this request"))
 		return
 	}
 	b.mu.Lock()
@@ -129,36 +126,36 @@ func (b *LoadBalancer) ProxyTheHealthiest(w http.ResponseWriter, r *http.Request
 		b.healthyHosts.Store(host, sure.Int(c)+-1)
 		b.mu.Unlock()
 	}()
-	// parse the url
-	uri, _ := url.Parse(host)
-	// Update the headers to allow for SSL redirection
-	r.URL.Host = uri.Host
-	r.URL.Scheme = uri.Scheme
-	r.Host = uri.Host
-	proxy := httputil.NewSingleHostReverseProxy(uri)
-	proxy.ErrorHandler = b.Fallback
-	proxy.ServeHTTP(w, r)
+	ctx.Response.Header.Set("X-Gate", "BOOM!")
+	ctx.URI().SetHost(host)
+	ctx.URI().SetScheme("https")
+	client := &fasthttp.Client{}
+	err := client.Do(&ctx.Request, &ctx.Response)
+	if err != nil {
+		b.Fallback(ctx, err)
+		return
+	}
 }
 
 func (b *LoadBalancer) healthCheck(uri string) bool {
 	// we don't need slow servers
 	// so timeout is just 1 second
-	c := http.Client{
-		Timeout: 1 * time.Second,
-	}
 	// check health
-	resp, err := c.Get(uri + b.HealthURL)
+	req := fasthttp.AcquireRequest()
+	req.SetRequestURI("http://" + uri + b.HealthURL)
+	resp := fasthttp.AcquireResponse()
+	client := &fasthttp.Client{}
+	err := client.Do(req, resp)
 	if err != nil {
 		return false
 	}
-	if resp.StatusCode != 200 {
-		return false
-	}
+	//	bodyBytes := resp.Body()
 	return true
 }
 
 // DefaultFallback function to response if any error occurs on reverse proxy
-func DefaultFallback(w http.ResponseWriter, _ *http.Request, err error) {
-	log.Println(err)
-	http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
+func DefaultFallback(ctx *fasthttp.RequestCtx, err error) {
+	ctx.SetStatusCode(fasthttp.StatusServiceUnavailable)
+	ctx.SetBody([]byte(err.Error()))
+	//panic(err)
 }
